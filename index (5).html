@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi 3D Tata Surya Menuju Pusat Galaksi</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: #000;
+            color: #fff;
+        }
+        
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        #info-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 200px;
+            z-index: 100;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        #info-panel h3 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        #info-panel p {
+            margin: 5px 0;
+        }
+        
+        #info-panel ul {
+            margin: 5px 0;
+            padding-left: 15px;
+        }
+        
+        #info-panel li {
+            margin-bottom: 3px;
+        }
+        
+        #info-panel.minimized {
+            max-width: 30px;
+            max-height: 30px;
+            overflow: hidden;
+            padding: 5px;
+        }
+        
+        #info-panel.minimized h3, #info-panel.minimized p, #info-panel.minimized ul {
+            display: none;
+        }
+        
+        #minimize-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 0;
+            width: 15px;
+            height: 15px;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+        
+        button {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 12px;
+        }
+        
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        #speed-control {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            font-size: 12px;
+        }
+        
+        input[type="range"] {
+            width: 150px;
+        }
+        
+        #planet-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 180px;
+            z-index: 100;
+            display: none;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        #planet-info h3 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        #planet-info p {
+            margin: 5px 0;
+        }
+        
+        #audio-controls {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 100;
+            font-size: 12px;
+        }
+        
+        #volume-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .audio-button {
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            font-size: 14px;
+        }
+        
+        input[type="range"] {
+            vertical-align: middle;
+        }
+        
+        .planet-label {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            pointer-events: none;
+            z-index: 10;
+            transform: translate(-50%, -100%);
+            white-space: nowrap;
+        }
+        
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            flex-direction: column;
+        }
+        
+        .progress-bar {
+            width: 200px;
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background: #4CAF50;
+            width: 0%;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div>Memuat simulasi...</div>
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+    </div>
+
+    <div id="container">
+        <div id="info-panel">
+            <button id="minimize-btn">-</button>
+            <h3>Simulasi 3D Tata Surya</h3>
+            <p>Tata surya kita bergerak menuju pusat galaksi Bima Sakti.</p>
+            <p>Kontrol:</p>
+            <ul>
+                <li>Klik & seret untuk rotasi</li>
+                <li>Scroll untuk zoom</li>
+                <li>Klik planet untuk info</li>
+            </ul>
+        </div>
+        
+        <div id="planet-info">
+            <h3 id="planet-name">Planet</h3>
+            <p id="planet-description">Deskripsi planet</p>
+        </div>
+        
+        <div id="audio-controls">
+            <button id="audio-toggle" class="audio-button">🔊</button>
+            <div id="volume-control">
+                <span>Volume:</span>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5">
+            </div>
+        </div>
+        
+        <div id="speed-control">
+            <label for="speed-slider">Kecepatan: </label>
+            <input type="range" id="speed-slider" min="0" max="5" step="0.1" value="1">
+            <span id="speed-value">1x</span>
+        </div>
+        
+        <div id="controls">
+            <button id="play-pause">Pause</button>
+            <button id="reset-view">Reset View</button>
+            <button id="toggle-orbits">Toggle Orbits</button>
+            <button id="toggle-labels">Toggle Labels</button>
+        </div>
+        
+        <!-- Elemen audio untuk musik latar -->
+        <audio id="background-music" loop>
+            <source src="https://cdn.pixabay.com/download/audio/2022/01/20/audio_d1718ab41b.mp3?filename=space-ambience-version-2-2-176234.mp3" type="audio/mpeg">
+            Browser Anda tidak mendukung elemen audio.
+        </audio>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Variabel global
+        let scene, camera, renderer, controls;
+        let sun, planets = [], planetData = [];
+        let galaxyCenter, galaxyStars = [];
+        let animationSpeed = 1;
+        let isPaused = false;
+        let showOrbits = true;
+        let showLabels = true;
+        let raycaster, mouse;
+        let selectedPlanet = null;
+        let backgroundMusic;
+        let planetLabels = [];
+        let sunParticles;
+        
+        // Data planet
+        const planetsInfo = [
+            { name: "Matahari", radius: 5, distance: 0, color: 0xFDB813, rotationSpeed: 0.002, orbitSpeed: 0, description: "Bintang pusat tata surya kita" },
+            { name: "Merkurius", radius: 0.4, distance: 10, color: 0xB6B6B6, rotationSpeed: 0.004, orbitSpeed: 0.02, description: "Planet terdekat dengan Matahari" },
+            { name: "Venus", radius: 0.9, distance: 15, color: 0xE7CDCD, rotationSpeed: 0.002, orbitSpeed: 0.015, description: "Planet terpanas di tata surya" },
+            { name: "Bumi", radius: 1, distance: 20, color: 0x6B93D6, rotationSpeed: 0.01, orbitSpeed: 0.01, description: "Planet tempat kita tinggal" },
+            { name: "Mars", radius: 0.5, distance: 25, color: 0xC1440E, rotationSpeed: 0.009, orbitSpeed: 0.008, description: "Planet merah" },
+            { name: "Jupiter", radius: 3, distance: 40, color: 0xD8CA9D, rotationSpeed: 0.02, orbitSpeed: 0.005, description: "Planet terbesar di tata surya" },
+            { name: "Saturnus", radius: 2.5, distance: 55, color: 0xE3E0C0, rotationSpeed: 0.018, orbitSpeed: 0.003, description: "Planet dengan cincin paling indah" },
+            { name: "Uranus", radius: 1.5, distance: 70, color: 0xD1E7E7, rotationSpeed: 0.012, orbitSpeed: 0.002, description: "Planet dengan rotasi miring" },
+            { name: "Neptunus", radius: 1.5, distance: 85, color: 0x5B5DDF, rotationSpeed: 0.011, orbitSpeed: 0.001, description: "Planet terjauh dari Matahari" }
+        ];
+        
+        // Inisialisasi scene
+        function init() {
+            // Update progress bar
+            updateProgress(10);
+            
+            // Buat scene
+            scene = new THREE.Scene();
+            
+            // Update progress bar
+            updateProgress(20);
+            
+            // Buat kamera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(0, 30, 100);
+            
+            // Update progress bar
+            updateProgress(30);
+            
+            // Buat renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000);
+            document.getElementById('container').appendChild(renderer.domElement);
+            
+            // Update progress bar
+            updateProgress(40);
+            
+            // Tambahkan kontrol orbit
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // Update progress bar
+            updateProgress(50);
+            
+            // Tambahkan lighting
+            const ambientLight = new THREE.AmbientLight(0x333333);
+            scene.add(ambientLight);
+            
+            const sunLight = new THREE.PointLight(0xFFFFFF, 2, 300);
+            sunLight.position.set(0, 0, 0);
+            scene.add(sunLight);
+            
+            // Update progress bar
+            updateProgress(60);
+            
+            // Raycaster untuk deteksi klik
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+            
+            // Setup audio
+            setupAudio();
+            
+            // Update progress bar
+            updateProgress(70);
+            
+            // Buat bintang latar belakang
+            createBackgroundStars();
+            
+            // Update progress bar
+            updateProgress(80);
+            
+            // Buat galaksi
+            createGalaxy();
+            
+            // Update progress bar
+            updateProgress(90);
+            
+            // Buat tata surya
+            createSolarSystem();
+            
+            // Update progress bar
+            updateProgress(100);
+            
+            // Tambahkan event listeners
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('click', onMouseClick);
+            
+            // Setup controls
+            setupControls();
+            
+            // Setup minimize button
+            setupMinimizeButton();
+            
+            // Sembunyikan loading screen
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+            }, 500);
+            
+            // Mulai animasi
+            animate();
+        }
+        
+        // Fungsi untuk update progress bar
+        function updateProgress(percent) {
+            document.getElementById('progress').style.width = percent + '%';
+        }
+        
+        // Setup minimize button
+        function setupMinimizeButton() {
+            const minimizeBtn = document.getElementById('minimize-btn');
+            const infoPanel = document.getElementById('info-panel');
+            
+            minimizeBtn.addEventListener('click', function() {
+                infoPanel.classList.toggle('minimized');
+                this.textContent = infoPanel.classList.contains('minimized') ? '+' : '-';
+            });
+        }
+        
+        // Setup audio
+        function setupAudio() {
+            backgroundMusic = document.getElementById('background-music');
+            backgroundMusic.volume = 0.5;
+            
+            // Kontrol audio toggle
+            document.getElementById('audio-toggle').addEventListener('click', function() {
+                if (backgroundMusic.paused) {
+                    backgroundMusic.play().catch(e => {
+                        console.log('Autoplay prevented:', e);
+                    });
+                    this.textContent = '🔊';
+                } else {
+                    backgroundMusic.pause();
+                    this.textContent = '🔇';
+                }
+            });
+            
+            // Kontrol volume
+            const volumeSlider = document.getElementById('volume-slider');
+            volumeSlider.addEventListener('input', function() {
+                backgroundMusic.volume = parseFloat(this.value);
+            });
+            
+            // Coba memutar musik setelah interaksi pengguna
+            document.addEventListener('click', function musicInit() {
+                if (backgroundMusic.paused) {
+                    backgroundMusic.play().catch(e => {
+                        console.log('Autoplay prevented:', e);
+                    });
+                }
+                document.removeEventListener('click', musicInit);
+            });
+        }
+        
+        // Buat bintang latar belakang
+        function createBackgroundStars() {
+            const starsGeometry = new THREE.BufferGeometry();
+            const starsMaterial = new THREE.PointsMaterial({
+                color: 0xFFFFFF,
+                size: 0.7,
+                transparent: true
+            });
+            
+            const starsVertices = [];
+            for (let i = 0; i < 10000; i++) {
+                const x = (Math.random() - 0.5) * 2000;
+                const y = (Math.random() - 0.5) * 2000;
+                const z = (Math.random() - 0.5) * 2000;
+                starsVertices.push(x, y, z);
+            }
+            
+            starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+            const starField = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(starField);
+        }
+        
+        // Buat galaksi
+        function createGalaxy() {
+            // Pusat galaksi (lubang hitam supermasif)
+            const galaxyGeometry = new THREE.SphereGeometry(15, 32, 32);
+            const galaxyMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x000000,
+                transparent: true,
+                opacity: 0.8
+            });
+            galaxyCenter = new THREE.Mesh(galaxyGeometry, galaxyMaterial);
+            galaxyCenter.position.set(500, 0, -800);
+            scene.add(galaxyCenter);
+            
+            // Buat cahaya pusat galaksi
+            const galaxyLight = new THREE.PointLight(0x4B0082, 3, 1000);
+            galaxyLight.position.set(galaxyCenter.position.x, galaxyCenter.position.y, galaxyCenter.position.z);
+            scene.add(galaxyLight);
+            
+            // Buat efek lensa gravitasi (corona)
+            const coronaGeometry = new THREE.SphereGeometry(20, 32, 32);
+            const coronaMaterial = new THREE.MeshBasicMaterial({
+                color: 0x9400D3,
+                transparent: true,
+                opacity: 0.3,
+                wireframe: true
+            });
+            const corona = new THREE.Mesh(coronaGeometry, coronaMaterial);
+            corona.position.copy(galaxyCenter.position);
+            scene.add(corona);
+            
+            // Buat lengan spiral galaksi
+            const spiralArms = 4;
+            const starsPerArm = 2000;
+            
+            for (let arm = 0; arm < spiralArms; arm++) {
+                const armAngle = (arm / spiralArms) * Math.PI * 2;
+                
+                for (let i = 0; i < starsPerArm; i++) {
+                    const distance = 100 + i * 0.5;
+                    const angle = armAngle + i * 0.01;
+                    const height = (Math.random() - 0.5) * 50;
+                    
+                    const x = Math.cos(angle) * distance + galaxyCenter.position.x;
+                    const z = Math.sin(angle) * distance + galaxyCenter.position.z;
+                    const y = height + galaxyCenter.position.y;
+                    
+                    const starGeometry = new THREE.SphereGeometry(0.7, 8, 8);
+                    const starMaterial = new THREE.MeshBasicMaterial({ 
+                        color: Math.random() > 0.7 ? 0x9370DB : 0xFFFFFF
+                    });
+                    const star = new THREE.Mesh(starGeometry, starMaterial);
+                    star.position.set(x, y, z);
+                    
+                    galaxyStars.push(star);
+                    scene.add(star);
+                }
+            }
+        }
+        
+        // Buat partikel matahari
+        function createSunParticles() {
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 1000;
+            
+            const posArray = new Float32Array(particlesCount * 3);
+            
+            for (let i = 0; i < particlesCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 10;
+            }
+            
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            
+            const particlesMaterial = new THREE.PointsMaterial({
+                size: 0.05,
+                color: 0xFFD700,
+                transparent: true,
+                blending: THREE.AdditiveBlending
+            });
+            
+            sunParticles = new THREE.Points(particlesGeometry, particlesMaterial);
+            sun.add(sunParticles);
+        }
+        
+        // Buat tata surya
+        function createSolarSystem() {
+            // Buat Matahari
+            const sunGeometry = new THREE.SphereGeometry(planetsInfo[0].radius, 32, 32);
+            const sunMaterial = new THREE.MeshBasicMaterial({ 
+                color: planetsInfo[0].color,
+                emissive: planetsInfo[0].color,
+                emissiveIntensity: 1
+            });
+            sun = new THREE.Mesh(sunGeometry, sunMaterial);
+            sun.userData = { name: planetsInfo[0].name, description: planetsInfo[0].description };
+            scene.add(sun);
+            planets.push(sun);
+            planetData.push({
+                mesh: sun,
+                distance: planetsInfo[0].distance,
+                rotationSpeed: planetsInfo[0].rotationSpeed,
+                orbitSpeed: planetsInfo[0].orbitSpeed,
+                angle: Math.random() * Math.PI * 2
+            });
+            
+            // Buat partikel untuk matahari
+            createSunParticles();
+            
+            // Buat label untuk matahari
+            createPlanetLabel(sun, planetsInfo[0].name);
+            
+            // Buat planet-planet
+            for (let i = 1; i < planetsInfo.length; i++) {
+                const planetInfo = planetsInfo[i];
+                
+                // Buat orbit
+                const orbitGeometry = new THREE.RingGeometry(planetInfo.distance - 0.1, planetInfo.distance + 0.1, 64);
+                const orbitMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0xFFFFFF, 
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial);
+                orbit.rotation.x = Math.PI / 2;
+                scene.add(orbit);
+                
+                // Buat planet
+                const planetGeometry = new THREE.SphereGeometry(planetInfo.radius, 32, 32);
+                const planetMaterial = new THREE.MeshLambertMaterial({ color: planetInfo.color });
+                const planet = new THREE.Mesh(planetGeometry, planetMaterial);
+                
+                // Posisi awal planet
+                const angle = Math.random() * Math.PI * 2;
+                planet.position.x = Math.cos(angle) * planetInfo.distance;
+                planet.position.z = Math.sin(angle) * planetInfo.distance;
+                
+                // Tambahkan data planet
+                planet.userData = { 
+                    name: planetInfo.name, 
+                    description: planetInfo.description 
+                };
+                
+                scene.add(planet);
+                planets.push(planet);
+                planetData.push({
+                    mesh: planet,
+                    distance: planetInfo.distance,
+                    rotationSpeed: planetInfo.rotationSpeed,
+                    orbitSpeed: planetInfo.orbitSpeed,
+                    angle: angle,
+                    orbit: orbit
+                });
+                
+                // Buat label untuk planet
+                createPlanetLabel(planet, planetInfo.name);
+                
+                // Tambahkan cincin untuk Saturnus
+                if (planetInfo.name === "Saturnus") {
+                    const ringGeometry = new THREE.RingGeometry(planetInfo.radius * 1.5, planetInfo.radius * 2.5, 32);
+                    const ringMaterial = new THREE.MeshBasicMaterial({ 
+                        color: 0xE3E0C0, 
+                        side: THREE.DoubleSide,
+                        transparent: true,
+                        opacity: 0.7
+                    });
+                    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                    ring.rotation.x = Math.PI / 2;
+                    planet.add(ring);
+                }
+            }
+        }
+        
+        // Buat label untuk planet
+        function createPlanetLabel(planet, name) {
+            const label = document.createElement('div');
+            label.className = 'planet-label';
+            label.textContent = name;
+            label.style.display = showLabels ? 'block' : 'none';
+            document.getElementById('container').appendChild(label);
+            
+            planetLabels.push({
+                planet: planet,
+                element: label
+            });
+        }
+        
+        // Update posisi label
+        function updateLabels() {
+            planetLabels.forEach(label => {
+                const screenPos = label.planet.position.clone();
+                screenPos.project(camera);
+                
+                const x = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
+                const y = (-screenPos.y * 0.5 + 0.5) * window.innerHeight;
+                
+                label.element.style.left = `${x}px`;
+                label.element.style.top = `${y}px`;
+                label.element.style.display = showLabels ? 'block' : 'none';
+            });
+        }
+        
+        // Setup kontrol UI
+        function setupControls() {
+            // Kontrol play/pause
+            document.getElementById('play-pause').addEventListener('click', function() {
+                isPaused = !isPaused;
+                this.textContent = isPaused ? 'Play' : 'Pause';
+            });
+            
+            // Kontrol reset view
+            document.getElementById('reset-view').addEventListener('click', function() {
+                camera.position.set(0, 30, 100);
+                controls.reset();
+            });
+            
+            // Kontrol toggle orbits
+            document.getElementById('toggle-orbits').addEventListener('click', function() {
+                showOrbits = !showOrbits;
+                for (let i = 1; i < planetData.length; i++) {
+                    if (planetData[i].orbit) {
+                        planetData[i].orbit.visible = showOrbits;
+                    }
+                }
+            });
+            
+            // Kontrol toggle labels
+            document.getElementById('toggle-labels').addEventListener('click', function() {
+                showLabels = !showLabels;
+                updateLabels();
+            });
+            
+            // Kontrol kecepatan
+            const speedSlider = document.getElementById('speed-slider');
+            const speedValue = document.getElementById('speed-value');
+            speedSlider.addEventListener('input', function() {
+                animationSpeed = parseFloat(this.value);
+                speedValue.textContent = animationSpeed.toFixed(1) + 'x';
+            });
+        }
+        
+        // Handle window resize
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            updateLabels();
+        }
+        
+        // Handle mouse click
+        function onMouseClick(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(planets);
+            
+            if (intersects.length > 0) {
+                selectedPlanet = intersects[0].object;
+                document.getElementById('planet-name').textContent = selectedPlanet.userData.name;
+                document.getElementById('planet-description').textContent = selectedPlanet.userData.description;
+                document.getElementById('planet-info').style.display = 'block';
+            } else {
+                document.getElementById('planet-info').style.display = 'none';
+            }
+        }
+        
+        // Animasi
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (!isPaused) {
+                // Animasi tata surya
+                for (let i = 0; i < planetData.length; i++) {
+                    const data = planetData[i];
+                    
+                    // Rotasi planet
+                    data.mesh.rotation.y += data.rotationSpeed * animationSpeed;
+                    
+                    // Revolusi planet (kecuali Matahari)
+                    if (i > 0) {
+                        data.angle += data.orbitSpeed * animationSpeed;
+                        data.mesh.position.x = Math.cos(data.angle) * data.distance;
+                        data.mesh.position.z = Math.sin(data.angle) * data.distance;
+                    }
+                }
+                
+                // Animasi partikel matahari
+                if (sunParticles) {
+                    sunParticles.rotation.y += 0.001 * animationSpeed;
+                }
+                
+                // Animasi galaksi (rotasi bintang-bintang)
+                galaxyStars.forEach(star => {
+                    star.rotation.y += 0.0001 * animationSpeed;
+                });
+                
+                // Gerakkan seluruh tata surya menuju pusat galaksi
+                const direction = new THREE.Vector3();
+                direction.subVectors(galaxyCenter.position, sun.position).normalize();
+                
+                const moveSpeed = 0.02 * animationSpeed;
+                sun.position.add(direction.multiplyScalar(moveSpeed));
+                
+                // Pindahkan semua planet relatif terhadap Matahari
+                for (let i = 1; i < planets.length; i++) {
+                    planets[i].position.add(direction.multiplyScalar(moveSpeed));
+                }
+            }
+            
+            controls.update();
+            updateLabels();
+            renderer.render(scene, camera);
+        }
+        
+        // Jalankan inisialisasi
+        init();
+    </script>
+</body>
+</html>
